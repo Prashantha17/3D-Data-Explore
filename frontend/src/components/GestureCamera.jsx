@@ -16,9 +16,15 @@
  */
 
 import { useEffect, useRef, useCallback } from 'react'
-import { Hands, HAND_CONNECTIONS } from '@mediapipe/hands'
-import { drawConnectors, drawLandmarks } from '@mediapipe/drawing_utils'
+import * as mpHands from '@mediapipe/hands'
+import * as mpDrawing from '@mediapipe/drawing_utils'
 import { useSocket } from '../context/SocketContext'
+
+// Safe bundler / window resolver for MediaPipe classes and functions
+const HandsClass = mpHands.Hands || mpHands.default?.Hands || (typeof mpHands.default === 'function' ? mpHands.default : null) || window.Hands
+const HAND_CONNECTIONS_VAL = mpHands.HAND_CONNECTIONS || mpHands.default?.HAND_CONNECTIONS || window.HAND_CONNECTIONS
+const drawConnectorsFunc = mpDrawing.drawConnectors || mpDrawing.default?.drawConnectors || window.drawConnectors
+const drawLandmarksFunc = mpDrawing.drawLandmarks || mpDrawing.default?.drawLandmarks || window.drawLandmarks
 
 // ─── Landmark indices (same as Python) ──────────────────────────────────────
 const WRIST       = 0
@@ -275,8 +281,12 @@ export default function GestureCamera({ active, userId, onGestureDetected }) {
       const lm = results.multiHandLandmarks[0]
 
       // Draw landmarks
-      drawConnectors(ctx, lm, HAND_CONNECTIONS, { color: '#667EEA', lineWidth: 2 })
-      drawLandmarks(ctx, lm, { color: '#764BA2', lineWidth: 1, radius: 3 })
+      if (drawConnectorsFunc && HAND_CONNECTIONS_VAL) {
+        drawConnectorsFunc(ctx, lm, HAND_CONNECTIONS_VAL, { color: '#667EEA', lineWidth: 2 })
+      }
+      if (drawLandmarksFunc) {
+        drawLandmarksFunc(ctx, lm, { color: '#764BA2', lineWidth: 1, radius: 3 })
+      }
 
       // Classify
       const { gesture, confidence } = classifyGesture(lm)
@@ -361,7 +371,12 @@ export default function GestureCamera({ active, userId, onGestureDetected }) {
         }
       }
 
-      const hands = new Hands({
+      const HandsConstructor = HandsClass || window.Hands
+      if (!HandsConstructor) {
+        throw new Error('MediaPipe Hands library is loading or blocked by browser extensions. Please refresh.')
+      }
+
+      const hands = new HandsConstructor({
         locateFile: (file) =>
           `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`,
       })
