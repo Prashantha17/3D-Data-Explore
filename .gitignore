@@ -1,0 +1,29 @@
+# Python virtual environments
+backend/venv/
+venv/
+.venv/
+env/
+
+# Node modules & build artifacts
+frontend/node_modules/
+node_modules/
+frontend/dist/
+dist/
+
+# Environment files
+.env
+backend/.env
+frontend/.env
+*.env
+
+# Cache & Bytecode
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.DS_Store
+Thumbs.db
+
+# Uploads & Temporary files
+backend/uploads/*
+!backend/uploads/.gitkeep

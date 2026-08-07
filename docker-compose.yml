@@ -1,0 +1,75 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# GestureExplorer Elite — Docker Compose
+# Starts: Frontend (Nginx) + Backend (Flask/SocketIO) + MongoDB
+# ─────────────────────────────────────────────────────────────────────────────
+
+version: '3.9'
+
+services:
+
+  # ── MongoDB Database ────────────────────────────────────────────────────────
+  mongodb:
+    image: mongo:7.0
+    container_name: gesture_mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    environment:
+      MONGO_INITDB_DATABASE: gesture_explorer_elite
+    networks:
+      - gesture_network
+
+  # ── Flask Backend ───────────────────────────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: gesture_backend
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    depends_on:
+      - mongodb
+    environment:
+      # Override MONGO_URI to use the Docker service name instead of localhost
+      MONGO_URI: mongodb://mongodb:27017/gesture_explorer_elite
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-gesture_elite_secret_2025}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      FLASK_ENV: production
+      SMTP_SERVER: ${SMTP_SERVER:-smtp.gmail.com}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USERNAME: ${SMTP_USERNAME:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_SENDER: ${SMTP_SENDER:-}
+    volumes:
+      # Persist uploaded files and sample data outside the container
+      - ./backend/uploads:/app/uploads
+      - ./backend/sample_data:/app/sample_data
+    networks:
+      - gesture_network
+
+  # ── Vite/React Frontend (served by Nginx) ───────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: gesture_frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - gesture_network
+
+# ── Shared Network ─────────────────────────────────────────────────────────────
+networks:
+  gesture_network:
+    driver: bridge
+
+# ── Persistent Volume for MongoDB ──────────────────────────────────────────────
+volumes:
+  mongo_data:
+    driver: local
