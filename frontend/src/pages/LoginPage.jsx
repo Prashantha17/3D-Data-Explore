@@ -61,7 +61,7 @@ export default function LoginPage() {
       } else if (err.response?.status === 401) {
         msg = 'Invalid email or password.'
       } else if (!err.response) {
-        msg = 'Cannot connect to server. Make sure the backend is running on port 5000.'
+        msg = 'Cannot connect to server. Please ensure the backend is active.'
       }
       setServerError(msg)
       toast.error(msg)

@@ -12,7 +12,7 @@ export function SocketProvider({ children }) {
   const initSocket = useCallback(() => {
     if (socketRef.current) return // Already initialized
 
-    const targetUrl = import.meta.env.VITE_API_URL || window.location.origin
+    const targetUrl = import.meta.env.VITE_API_URL || 'https://threed-data-explore.onrender.com'
     const socket = io(targetUrl, {
       transports: ['polling', 'websocket'],
       reconnectionAttempts: 10,

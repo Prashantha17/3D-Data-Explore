@@ -11,10 +11,9 @@ import './index.css'
 
 import axios from 'axios'
 
-const API_URL = import.meta.env.VITE_API_URL || ''
-if (API_URL) {
-  axios.defaults.baseURL = API_URL
-}
+const API_URL = import.meta.env.VITE_API_URL || 'https://threed-data-explore.onrender.com'
+axios.defaults.baseURL = API_URL
+
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || "YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com"
 
