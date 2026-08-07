@@ -491,9 +491,9 @@ def send_otp_email(to_email, username, otp_code, subject="Your 3D Data Explorer 
         
         port = int(smtp_port) if smtp_port else 587
         if port == 465:
-            server = smtplib.SMTP_SSL(smtp_server, port)
+            server = smtplib.SMTP_SSL(smtp_server, port, timeout=4)
         else:
-            server = smtplib.SMTP(smtp_server, port)
+            server = smtplib.SMTP(smtp_server, port, timeout=4)
             server.starttls()
             
         server.login(smtp_user, smtp_password)
