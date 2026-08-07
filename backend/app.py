@@ -505,6 +505,33 @@ def send_otp_email(to_email, username, otp_code, subject="Your 3D Data Explorer 
         logger.error(f"❌ Failed to send verification email to {to_email}: {e}")
         return False
 
+@app.route('/api/auth/test-smtp', methods=['GET', 'POST'])
+def test_smtp():
+    email = request.args.get('email') or (request.get_json() or {}).get('email') or 'hmp7964@gmail.com'
+    smtp_user = os.getenv('SMTP_USERNAME', 'NOT_SET')
+    smtp_pass_set = bool(os.getenv('SMTP_PASSWORD'))
+    
+    if not smtp_pass_set or smtp_user in ['NOT_SET', 'your_gmail_address_here@gmail.com']:
+        return jsonify({
+            'status': 'error',
+            'message': 'SMTP environment variables are not set on Render.',
+            'smtp_user': smtp_user,
+            'smtp_password_configured': smtp_pass_set
+        }), 400
+        
+    success = send_otp_email(email, 'Test User', '123456', subject='Test OTP Email - 3D Data Explorer', purpose='SMTP Diagnostic Test')
+    if success:
+        return jsonify({
+            'status': 'success',
+            'message': f'Test email sent successfully to {email}!'
+        }), 200
+    else:
+        return jsonify({
+            'status': 'error',
+            'message': 'Failed to send email via Gmail SMTP. Please verify 16-character App Password.',
+            'smtp_user': smtp_user
+        }), 500
+
 # ─────────────────────────────────────────────────────────────────────────────
 # FORGOT PASSWORD ROUTES
 # ─────────────────────────────────────────────────────────────────────────────
