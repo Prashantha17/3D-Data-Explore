@@ -35,8 +35,8 @@ export default function RegisterPage() {
         requiredMsg: 'Full name is required',
         minLength: 2,
         minLengthMsg: 'Name must be at least 2 characters',
-        maxLength: 8,
-        maxLengthMsg: 'Name must be at most 8 characters',
+        maxLength: 50,
+        maxLengthMsg: 'Name must be at most 50 characters',
       },
       email: {
         required: true,
@@ -164,7 +164,8 @@ export default function RegisterPage() {
         toast.success('Account created with Google!')
         navigate('/dashboard', { replace: true })
       } catch (err) {
-        toast.error('Google signup failed')
+        const msg = err.response?.data?.error || 'Google signup failed. Please try again.'
+        toast.error(msg)
       } finally {
         setIsSubmitting(false)
       }

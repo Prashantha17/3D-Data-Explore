@@ -388,16 +388,17 @@ def google_login():
         return jsonify({'error': 'Token required'}), 400
     
     try:
-        # First try as an access_token
-        resp = http_requests.get(f'https://www.googleapis.com/oauth2/v3/userinfo?access_token={token}', timeout=5)
-        info = resp.json()
+        # First try as an access_token using standard Authorization Bearer header
+        headers = {'Authorization': f'Bearer {token}'}
+        resp = http_requests.get('https://www.googleapis.com/oauth2/v3/userinfo', headers=headers, timeout=10)
+        info = resp.json() if resp.status_code == 200 else {}
         
-        if resp.status_code != 200 or 'error' in info:
-            # Fallback to id_token validation
-            resp = http_requests.get(f'https://oauth2.googleapis.com/tokeninfo?id_token={token}', timeout=5)
-            info = resp.json()
+        if not info or 'email' not in info:
+            # Fallback to id_token validation endpoint
+            resp = http_requests.get(f'https://oauth2.googleapis.com/tokeninfo?id_token={token}', timeout=10)
+            info = resp.json() if resp.status_code == 200 else {}
             
-        if 'error' in info:
+        if not info or 'error' in info:
             logger.error(f"Google auth error from tokeninfo: {info}")
             return jsonify({'error': 'Invalid Google token'}), 401
             

@@ -79,7 +79,8 @@ export default function LoginPage() {
         toast.success('Google login successful!')
         navigate('/dashboard', { replace: true })
       } catch (err) {
-        toast.error('Google login failed')
+        const msg = err.response?.data?.error || 'Google login failed. Please try again.'
+        toast.error(msg)
       } finally {
         setIsSubmitting(false)
       }
