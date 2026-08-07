@@ -307,7 +307,7 @@ def send_register_otp():
             
     logger.info(f"🔑 [REGISTER OTP LOG] Verification code for '{email}' ({name}) is: {otp_code}")
     
-    email_sent = send_otp_email(email, name, otp_code, subject="Verify Your Email - 3D Data Explorer", purpose="Email Registration")
+    email_sent, _ = send_otp_email(email, name, otp_code, subject="Verify Your Email - 3D Data Explorer", purpose="Email Registration")
     
     if email_sent:
         return jsonify({
@@ -500,10 +500,11 @@ def send_otp_email(to_email, username, otp_code, subject="Your 3D Data Explorer 
         server.sendmail(smtp_sender, to_email, msg.as_string())
         server.quit()
         logger.info(f"📧 Verification email sent successfully to {to_email}")
-        return True
+        return True, "Success"
     except Exception as e:
-        logger.error(f"❌ Failed to send verification email to {to_email}: {e}")
-        return False
+        err_msg = str(e)
+        logger.error(f"❌ Failed to send verification email to {to_email}: {err_msg}")
+        return False, err_msg
 
 @app.route('/api/auth/test-smtp', methods=['GET', 'POST'])
 def test_smtp():
@@ -519,7 +520,7 @@ def test_smtp():
             'smtp_password_configured': smtp_pass_set
         }), 400
         
-    success = send_otp_email(email, 'Test User', '123456', subject='Test OTP Email - 3D Data Explorer', purpose='SMTP Diagnostic Test')
+    success, err_details = send_otp_email(email, 'Test User', '123456', subject='Test OTP Email - 3D Data Explorer', purpose='SMTP Diagnostic Test')
     if success:
         return jsonify({
             'status': 'success',
@@ -528,7 +529,7 @@ def test_smtp():
     else:
         return jsonify({
             'status': 'error',
-            'message': 'Failed to send email via Gmail SMTP. Please verify 16-character App Password.',
+            'message': f'Gmail SMTP rejected login: {err_details}',
             'smtp_user': smtp_user
         }), 500
 
@@ -573,7 +574,7 @@ def forgot_password():
     user_name = user.get('name', 'User')
     logger.info(f"🔑 [OTP LOG] OTP Code for email '{email}' ({user_name}) is: {otp_code}")
     
-    email_sent = send_otp_email(email, user_name, otp_code)
+    email_sent, _ = send_otp_email(email, user_name, otp_code)
     
     if email_sent:
         return jsonify({
