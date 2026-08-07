@@ -85,6 +85,9 @@ export default function RegisterPage() {
         email: values.email.trim().toLowerCase(),
         password: values.password,
       })
+      if (res.data.otp_code) {
+        setOtp(res.data.otp_code)
+      }
       toast.success(res.data.message || `OTP verification code sent to ${values.email}`)
       setStep('otp')
     } catch (err) {
