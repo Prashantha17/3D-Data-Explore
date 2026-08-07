@@ -102,13 +102,33 @@ else:
     logger.warning('⚠️  GEMINI_API_KEY not set — AI insights will use rule-based fallback')
 
 # ─────────────────────────────────────────────────────────────────────────────
-# MONGODB CONNECTION
+# MONGODB CONNECTION WITH TLS / SSL HANDSHAKE FALLBACK
 # ─────────────────────────────────────────────────────────────────────────────
 
 try:
     mongo_uri = os.getenv('MONGO_URI', 'mongodb://localhost:27017/gesture_explorer_elite')
-    mongo_client = MongoClient(mongo_uri, serverSelectionTimeoutMS=3000, retryWrites=True)
-    mongo_client.server_info()
+    
+    # Configure PyMongo SSL / TLS settings for MongoDB Atlas on Linux / Render
+    client_kwargs = {
+        'serverSelectionTimeoutMS': 5000,
+        'retryWrites': True,
+    }
+    
+    try:
+        import certifi
+        client_kwargs['tlsCAFile'] = certifi.where()
+    except Exception:
+        pass
+        
+    try:
+        mongo_client = MongoClient(mongo_uri, **client_kwargs)
+        mongo_client.server_info()
+    except Exception as ssl_err:
+        logger.warning(f'⚠️ MongoDB SSL handshake retry with TLS bypass: {ssl_err}')
+        client_kwargs['tlsAllowInvalidCertificates'] = True
+        mongo_client = MongoClient(mongo_uri, **client_kwargs)
+        mongo_client.server_info()
+
     db = mongo_client['gesture_explorer_elite']
     users_col = db['users']
     datasets_col = db['datasets']
