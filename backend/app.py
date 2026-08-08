@@ -514,7 +514,7 @@ def send_otp_email(to_email, username, otp_code, subject="Your 3D Data Explorer 
 
 @app.route('/api/auth/test-smtp', methods=['GET', 'POST'])
 def test_smtp():
-    email = request.args.get('email') or (request.get_json() or {}).get('email') or 'hmp7964@gmail.com'
+    email = request.args.get('email') or (request.get_json(silent=True) or {}).get('email') or 'hmp7964@gmail.com'
     smtp_user = os.getenv('SMTP_USERNAME', 'NOT_SET')
     smtp_pass_set = bool(os.getenv('SMTP_PASSWORD'))
     
