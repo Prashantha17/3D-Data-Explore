@@ -663,10 +663,11 @@ def forgot_password():
             logger.error(f'Failed to save OTP: {e}')
             return jsonify({'error': 'Database error during OTP generation'}), 500
             
+    username = user.get('name') or user.get('email', 'User').split('@')[0]
     # Dispatch email sending asynchronously in background thread so HTTP response returns in <0.1s
     threading.Thread(
         target=send_otp_email,
-        args=(email, user_name, otp_code, "Password Reset Code - 3D Data Explorer", "Password Reset"),
+        args=(email, username, otp_code, "Password Reset Code - 3D Data Explorer", "Password Reset"),
         daemon=True
     ).start()
     
