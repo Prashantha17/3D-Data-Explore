@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useTheme } from '../context/ThemeContext'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Hand, Mail, User, Lock, Key, ArrowRight, ArrowLeft, AlertCircle, Loader2, Sun, Moon, CheckCircle2 } from 'lucide-react'
+import { Hand, Mail, User, Lock, Key, ArrowRight, ArrowLeft, AlertCircle, Loader2, Sun, Moon, CheckCircle2, Eye, EyeOff } from 'lucide-react'
 import axios from 'axios'
 import toast from 'react-hot-toast'
 
@@ -21,6 +21,8 @@ export default function ForgotPasswordPage() {
   const [otp, setOtp] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
+  const [showNewPassword, setShowNewPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
 
   // Handle requesting the OTP (Step 1)
   const handleRequestOtp = async (e) => {
@@ -89,8 +91,8 @@ export default function ForgotPasswordPage() {
       setError('Password must be at least 6 characters')
       return
     }
-    if (newPassword.length > 8) {
-      setError('Password must be at most 8 characters')
+    if (newPassword.length > 64) {
+      setError('Password must be at most 64 characters')
       return
     }
     if (!/[A-Z]/.test(newPassword)) {
@@ -310,13 +312,21 @@ export default function ForgotPasswordPage() {
                     <Lock size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
                     <input
                       id="new-password"
-                      type="password"
-                      placeholder="     6–8 chars with A-Z, a-z, 0-9, !@#"
-                      maxLength={8}
+                      type={showNewPassword ? 'text' : 'password'}
+                      placeholder="6–64 chars with A-Z, a-z, 0-9, !@#"
+                      maxLength={64}
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
-                      className="input-field pl-10"
+                      className="input-field pl-10 pr-10"
                     />
+                    <button
+                      type="button"
+                      onClick={() => setShowNewPassword(!showNewPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition-colors p-1"
+                      aria-label={showNewPassword ? 'Hide password' : 'Show password'}
+                    >
+                      {showNewPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
                   </div>
                 </div>
 
@@ -326,13 +336,21 @@ export default function ForgotPasswordPage() {
                     <Lock size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
                     <input
                       id="confirm-password"
-                      type="password"
-                      placeholder="     Repeat new password"
-                      maxLength={8}
+                      type={showConfirmPassword ? 'text' : 'password'}
+                      placeholder="Repeat new password"
+                      maxLength={64}
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
-                      className="input-field pl-10"
+                      className="input-field pl-10 pr-10"
                     />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition-colors p-1"
+                      aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
+                    >
+                      {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
                   </div>
                 </div>
 
