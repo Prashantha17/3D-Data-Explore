@@ -105,6 +105,7 @@ else:
 # MONGODB CONNECTION WITH TLS / SSL HANDSHAKE FALLBACK
 # ─────────────────────────────────────────────────────────────────────────────
 
+MONGO_INIT_ERROR = None
 try:
     mongo_uri = os.getenv('MONGO_URI', 'mongodb://localhost:27017/gesture_explorer_elite')
     
@@ -148,15 +149,10 @@ except Exception as e:
     logger.warning(f'⚠️  MongoDB unavailable: {e}')
     db = users_col = datasets_col = sessions_col = gesture_col = reg_otps_col = None
     DB_CONNECTED = False
+    MONGO_INIT_ERROR = str(e)
 
 # ─────────────────────────────────────────────────────────────────────────────
-# CAMERA STATE — removed. Gesture detection now runs in the browser via
-# MediaPipe JS. The backend only receives gesture results via gesture_event
-# SocketIO and logs them to MongoDB.
-# ─────────────────────────────────────────────────────────────────────────────
-
-# ─────────────────────────────────────────────────────────────────────────────
-# SOCKET.IO EVENTS
+# SOCKET.IO EVENTS & HEALTH ENDPOINT
 # ─────────────────────────────────────────────────────────────────────────────
 
 @app.route('/api/health', methods=['GET'])
