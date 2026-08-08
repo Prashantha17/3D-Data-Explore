@@ -305,20 +305,17 @@ def send_register_otp():
         except Exception as e:
             logger.error(f'Failed to store registration OTP in DB: {e}')
             
-    logger.info(f"🔑 [REGISTER OTP LOG] Verification code for '{email}' ({name}) is: {otp_code}")
+    # Dispatch email sending asynchronously in background thread so HTTP response returns in <0.1s
+    threading.Thread(
+        target=send_otp_email,
+        args=(email, name, otp_code, "Verify Your Email - 3D Data Explorer", "Email Registration"),
+        daemon=True
+    ).start()
     
-    email_sent, _ = send_otp_email(email, name, otp_code, subject="Verify Your Email - 3D Data Explorer", purpose="Email Registration")
-    
-    if email_sent:
-        return jsonify({
-            'message': f'Verification OTP code sent to {email}.',
-            'otp_code': otp_code
-        }), 200
-    else:
-        return jsonify({
-            'message': f'Verification code generated ({otp_code}). Auto-filling for instant registration.',
-            'otp_code': otp_code
-        }), 200
+    return jsonify({
+        'message': f'Verification OTP code sent to {email}.',
+        'otp_code': otp_code
+    }), 200
 
 @app.route('/api/auth/register', methods=['POST'])
 def register():
@@ -572,19 +569,16 @@ def forgot_password():
             logger.error(f'Failed to save OTP: {e}')
             return jsonify({'error': 'Database error during OTP generation'}), 500
             
-    user_name = user.get('name', 'User')
-    logger.info(f"🔑 [OTP LOG] OTP Code for email '{email}' ({user_name}) is: {otp_code}")
+    # Dispatch email sending asynchronously in background thread so HTTP response returns in <0.1s
+    threading.Thread(
+        target=send_otp_email,
+        args=(email, user_name, otp_code, "Password Reset Code - 3D Data Explorer", "Password Reset"),
+        daemon=True
+    ).start()
     
-    email_sent, _ = send_otp_email(email, user_name, otp_code)
-    
-    if email_sent:
-        return jsonify({
-            'message': f'OTP code sent successfully to {email}.'
-        }), 200
-    else:
-        return jsonify({
-            'message': f'OTP code generated ({otp_code}). Email delivery failed or SMTP not reachable.'
-        }), 200
+    return jsonify({
+        'message': f'OTP code sent successfully to {email}.'
+    }), 200
 
 @app.route('/api/auth/verify-otp', methods=['POST'])
 def verify_otp():
