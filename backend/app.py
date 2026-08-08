@@ -159,6 +159,28 @@ except Exception as e:
 # SOCKET.IO EVENTS
 # ─────────────────────────────────────────────────────────────────────────────
 
+@app.route('/api/health', methods=['GET'])
+def health_check():
+    db_status = False
+    error_msg = None
+    if users_col is not None:
+        try:
+            mongo_client.admin.command('ping')
+            db_status = True
+        except Exception as e:
+            error_msg = str(e)
+            db_status = False
+    return jsonify({
+        'status': 'healthy' if db_status else 'degraded',
+        'db_connected': db_status,
+        'db_error': error_msg,
+        'email_services': {
+            'brevo': bool(os.getenv('BREVO_API_KEY')),
+            'resend': bool(os.getenv('RESEND_API_KEY')),
+            'smtp': bool(os.getenv('SMTP_PASSWORD'))
+        }
+    }), (200 if db_status else 500)
+
 @socketio.on('connect')
 def on_connect(auth):
     logger.info(f'🔌 Client connected: {request.sid}')
