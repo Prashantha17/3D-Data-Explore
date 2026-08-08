@@ -440,51 +440,92 @@ def google_login():
         return jsonify({'error': 'Google authentication failed'}), 500
 
 def send_otp_email(to_email, username, otp_code, subject="Your 3D Data Explorer Verification Code", purpose="Email Verification"):
+    plain_text = f"Hello {username},\n\nYour 3D Data Explorer OTP code is: {otp_code}\nThis code is valid for 10 minutes.\n\nIf you did not request this, please ignore."
+    
+    html_content = f"""
+    <html>
+      <body style="font-family: 'Inter', sans-serif; background-color: #0f172a; color: #f1f5f9; padding: 30px;">
+        <div style="max-width: 600px; margin: 0 auto; background-color: #1e293b; border: 1px solid rgba(102, 126, 234, 0.15); border-radius: 16px; padding: 40px; box-shadow: 0 10px 30px rgba(0,0,0,0.35);">
+          <div style="text-align: center; margin-bottom: 30px;">
+            <h1 style="color: #667eea; margin: 0; font-size: 28px; font-weight: bold;">3D Data Explorer</h1>
+            <p style="color: #94a3b8; margin: 5px 0 0 0; font-size: 14px;">{purpose}</p>
+          </div>
+          <hr style="border: 0; border-top: 1px solid rgba(102, 126, 234, 0.1); margin-bottom: 30px;" />
+          <p style="color: #f1f5f9; font-size: 16px; line-height: 1.6;">Hello <strong>{username}</strong>,</p>
+          <p style="color: #cbd5e1; font-size: 16px; line-height: 1.6;">Please use the following 6-digit One-Time Password (OTP) to complete your {purpose.lower()}. This code is valid for 10 minutes.</p>
+          
+          <div style="text-align: center; margin: 40px 0;">
+            <div style="display: inline-block; background: linear-gradient(135deg, #667eea, #764ba2); color: #ffffff; font-size: 32px; font-weight: bold; letter-spacing: 6px; padding: 18px 40px; border-radius: 12px; box-shadow: 0 8px 24px rgba(102, 126, 234, 0.25);">
+              {otp_code}
+            </div>
+          </div>
+          
+          <p style="color: #94a3b8; font-size: 14px; line-height: 1.6; border-top: 1px solid rgba(102, 126, 234, 0.1); padding-top: 25px;">If you did not request this code, please ignore this email.</p>
+          <p style="color: #94a3b8; font-size: 12px; margin-top: 10px;">&copy; 2026 GestureExplorer Elite. All rights reserved.</p>
+        </div>
+      </body>
+    </html>
+    """
+
+    # 1. Resend API Engine (Recommended for Cloud Hosting)
+    resend_key = os.getenv('RESEND_API_KEY', '').strip('\'" \t\r\n')
+    if resend_key:
+        try:
+            resend_from = os.getenv('RESEND_FROM', '3D Data Explorer <onboarding@resend.dev>').strip('\'" \t\r\n')
+            resp = http_requests.post(
+                'https://api.resend.com/emails',
+                headers={'Authorization': f'Bearer {resend_key}', 'Content-Type': 'application/json'},
+                json={'from': resend_from, 'to': [to_email], 'subject': subject, 'html': html_content, 'text': plain_text},
+                timeout=10
+            )
+            if resp.status_code in [200, 201]:
+                logger.info(f"📧 Verification email delivered via Resend API to {to_email}")
+                return True, "Success (Resend API)"
+            else:
+                logger.error(f"❌ Resend API error ({resp.status_code}): {resp.text}")
+        except Exception as e:
+            logger.error(f"❌ Resend API exception: {e}")
+
+    # 2. Brevo API Engine
+    brevo_key = os.getenv('BREVO_API_KEY', '').strip('\'" \t\r\n')
+    if brevo_key:
+        try:
+            sender_email = os.getenv('BREVO_SENDER', os.getenv('SMTP_USERNAME', 'hmp7964@gmail.com')).strip('\'" \t\r\n')
+            resp = http_requests.post(
+                'https://api.brevo.com/v3/smtp/email',
+                headers={'api-key': brevo_key, 'Content-Type': 'application/json'},
+                json={
+                    'sender': {'name': '3D Data Explorer', 'email': sender_email},
+                    'to': [{'email': to_email, 'name': username}],
+                    'subject': subject,
+                    'htmlContent': html_content,
+                    'textContent': plain_text
+                },
+                timeout=10
+            )
+            if resp.status_code in [200, 201]:
+                logger.info(f"📧 Verification email delivered via Brevo API to {to_email}")
+                return True, "Success (Brevo API)"
+            else:
+                logger.error(f"❌ Brevo API error ({resp.status_code}): {resp.text}")
+        except Exception as e:
+            logger.error(f"❌ Brevo API exception: {e}")
+
+    # 3. SMTP Engine Fallback
     smtp_server = os.getenv('SMTP_SERVER', 'smtp.gmail.com').strip('\'" \t\r\n')
     smtp_port = os.getenv('SMTP_PORT', '587').strip('\'" \t\r\n')
     smtp_user = os.getenv('SMTP_USERNAME', '').strip('\'" \t\r\n')
     smtp_password = os.getenv('SMTP_PASSWORD', '').strip('\'" \t\r\n').replace(' ', '')
-    # Read sender display name — supports both MAIL_DEFAULT_SENDER and SMTP_SENDER keys
-    smtp_sender = os.getenv('MAIL_DEFAULT_SENDER') or os.getenv('SMTP_SENDER') or f'3D Data Explorer <{smtp_user}>'
     
     if not smtp_server or not smtp_user or not smtp_password or smtp_user in ['your_gmail_address_here@gmail.com', 'NOT_SET']:
-        logger.warning("⚠️ SMTP email credentials are not configured in .env. Falling back to console logging.")
-        return False, "SMTP credentials missing"
-        return False
+        logger.warning("⚠️ Email credentials missing in .env.")
+        return False, "Email credentials missing"
         
     try:
         msg = MIMEMultipart('alternative')
         msg['Subject'] = subject
         msg['From'] = f'3D Data Explorer <{smtp_user}>'
         msg['To'] = to_email
-        
-        plain_text = f"Hello {username},\n\nYour 3D Data Explorer OTP code is: {otp_code}\nThis code is valid for 10 minutes.\n\nIf you did not request this, please ignore."
-        
-        html_content = f"""
-        <html>
-          <body style="font-family: 'Inter', sans-serif; background-color: #0f172a; color: #f1f5f9; padding: 30px;">
-            <div style="max-width: 600px; margin: 0 auto; background-color: #1e293b; border: 1px solid rgba(102, 126, 234, 0.15); border-radius: 16px; padding: 40px; box-shadow: 0 10px 30px rgba(0,0,0,0.35);">
-              <div style="text-align: center; margin-bottom: 30px;">
-                <h1 style="color: #667eea; margin: 0; font-size: 28px; font-weight: bold;">3D Data Explorer</h1>
-                <p style="color: #94a3b8; margin: 5px 0 0 0; font-size: 14px;">{purpose}</p>
-              </div>
-              <hr style="border: 0; border-top: 1px solid rgba(102, 126, 234, 0.1); margin-bottom: 30px;" />
-              <p style="color: #f1f5f9; font-size: 16px; line-height: 1.6;">Hello <strong>{username}</strong>,</p>
-              <p style="color: #cbd5e1; font-size: 16px; line-height: 1.6;">Please use the following 6-digit One-Time Password (OTP) to complete your {purpose.lower()}. This code is valid for 10 minutes.</p>
-              
-              <div style="text-align: center; margin: 40px 0;">
-                <div style="display: inline-block; background: linear-gradient(135deg, #667eea, #764ba2); color: #ffffff; font-size: 32px; font-weight: bold; letter-spacing: 6px; padding: 18px 40px; border-radius: 12px; box-shadow: 0 8px 24px rgba(102, 126, 234, 0.25);">
-                  {otp_code}
-                </div>
-              </div>
-              
-              <p style="color: #94a3b8; font-size: 14px; line-height: 1.6; border-top: 1px solid rgba(102, 126, 234, 0.1); padding-top: 25px;">If you did not request this code, please ignore this email.</p>
-              <p style="color: #94a3b8; font-size: 12px; margin-top: 10px;">&copy; 2026 GestureExplorer Elite. All rights reserved.</p>
-            </div>
-          </body>
-        </html>
-        """
-        
         msg.attach(MIMEText(plain_text, 'plain'))
         msg.attach(MIMEText(html_content, 'html'))
         
@@ -496,7 +537,6 @@ def send_otp_email(to_email, username, otp_code, subject="Your 3D Data Explorer 
             server.starttls()
             
         server.login(smtp_user, smtp_password)
-        # First argument MUST be raw smtp_user email address for envelope sender
         server.sendmail(smtp_user, to_email, msg.as_string())
         server.quit()
         logger.info(f"📧 Verification email sent successfully to {to_email}")
