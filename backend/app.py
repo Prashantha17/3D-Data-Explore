@@ -166,10 +166,18 @@ def health_check():
         except Exception as e:
             error_msg = str(e)
             db_status = False
+    mongo_uri_val = os.getenv('MONGO_URI', '')
+    init_err = globals().get('MONGO_INIT_ERROR')
+    if not mongo_uri_val:
+        reason = "MONGO_URI environment variable is not set on Render (using default localhost which is unavailable on cloud servers)."
+    else:
+        reason = init_err or "MongoDB connection failed or timed out."
+
     return jsonify({
         'status': 'healthy' if db_status else 'degraded',
         'db_connected': db_status,
-        'db_error': error_msg,
+        'db_error': None if db_status else (error_msg or reason),
+        'mongo_uri_configured': bool(mongo_uri_val),
         'email_services': {
             'brevo': bool(os.getenv('BREVO_API_KEY')),
             'resend': bool(os.getenv('RESEND_API_KEY')),
