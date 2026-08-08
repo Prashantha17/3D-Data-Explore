@@ -482,9 +482,13 @@ def send_otp_email(to_email, username, otp_code, subject="Your 3D Data Explorer 
                 logger.info(f"📧 Verification email delivered via Resend API to {to_email}")
                 return True, "Success (Resend API)"
             else:
-                logger.error(f"❌ Resend API error ({resp.status_code}): {resp.text}")
+                err_msg = f"Resend API error ({resp.status_code}): {resp.text}"
+                logger.error(f"❌ {err_msg}")
+                return False, err_msg
         except Exception as e:
-            logger.error(f"❌ Resend API exception: {e}")
+            err_msg = f"Resend API exception: {e}"
+            logger.error(f"❌ {err_msg}")
+            return False, err_msg
 
     # 2. Brevo API Engine
     brevo_key = os.getenv('BREVO_API_KEY', '').strip('\'" \t\r\n')
@@ -507,9 +511,13 @@ def send_otp_email(to_email, username, otp_code, subject="Your 3D Data Explorer 
                 logger.info(f"📧 Verification email delivered via Brevo API to {to_email}")
                 return True, "Success (Brevo API)"
             else:
-                logger.error(f"❌ Brevo API error ({resp.status_code}): {resp.text}")
+                err_msg = f"Brevo API error ({resp.status_code}): {resp.text}"
+                logger.error(f"❌ {err_msg}")
+                return False, err_msg
         except Exception as e:
-            logger.error(f"❌ Brevo API exception: {e}")
+            err_msg = f"Brevo API exception: {e}"
+            logger.error(f"❌ {err_msg}")
+            return False, err_msg
 
     # 3. SMTP Engine Fallback
     smtp_server = os.getenv('SMTP_SERVER', 'smtp.gmail.com').strip('\'" \t\r\n')
