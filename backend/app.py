@@ -2,7 +2,7 @@
 GestureExplorer Elite - Production Backend
 Flask + SocketIO + JWT + MongoDB + MediaPipe (Optimized)
 """
-import os, uuid, json, logging, re, random, smtplib
+import os, uuid, json, logging, re, random, smtplib, threading
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from datetime import datetime, timedelta, timezone
