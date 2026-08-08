@@ -455,8 +455,10 @@ def send_otp_email(to_email, username, otp_code, subject="Your 3D Data Explorer 
     try:
         msg = MIMEMultipart('alternative')
         msg['Subject'] = subject
-        msg['From'] = smtp_sender
+        msg['From'] = f'3D Data Explorer <{smtp_user}>'
         msg['To'] = to_email
+        
+        plain_text = f"Hello {username},\n\nYour 3D Data Explorer OTP code is: {otp_code}\nThis code is valid for 10 minutes.\n\nIf you did not request this, please ignore."
         
         html_content = f"""
         <html>
@@ -483,8 +485,8 @@ def send_otp_email(to_email, username, otp_code, subject="Your 3D Data Explorer 
         </html>
         """
         
-        part = MIMEText(html_content, 'html')
-        msg.attach(part)
+        msg.attach(MIMEText(plain_text, 'plain'))
+        msg.attach(MIMEText(html_content, 'html'))
         
         port = int(smtp_port) if smtp_port else 587
         if port == 465:
@@ -494,7 +496,8 @@ def send_otp_email(to_email, username, otp_code, subject="Your 3D Data Explorer 
             server.starttls()
             
         server.login(smtp_user, smtp_password)
-        server.sendmail(smtp_sender, to_email, msg.as_string())
+        # First argument MUST be raw smtp_user email address for envelope sender
+        server.sendmail(smtp_user, to_email, msg.as_string())
         server.quit()
         logger.info(f"📧 Verification email sent successfully to {to_email}")
         return True, "Success"
