@@ -552,12 +552,15 @@ def test_smtp():
     smtp_user = os.getenv('SMTP_USERNAME', 'NOT_SET')
     smtp_pass_set = bool(os.getenv('SMTP_PASSWORD'))
     
-    if not smtp_pass_set or smtp_user in ['NOT_SET', 'your_gmail_address_here@gmail.com']:
+    resend_set = bool(os.getenv('RESEND_API_KEY'))
+    brevo_set = bool(os.getenv('BREVO_API_KEY'))
+    
+    if not (smtp_pass_set or resend_set or brevo_set):
         return jsonify({
             'status': 'error',
-            'message': 'SMTP environment variables are not set on Render.',
+            'message': 'No email delivery service configured (RESEND_API_KEY, BREVO_API_KEY, or SMTP_PASSWORD required).',
             'smtp_user': smtp_user,
-            'smtp_password_configured': smtp_pass_set
+            'resend_configured': resend_set
         }), 400
         
     success, err_details = send_otp_email(email, 'Test User', '123456', subject='Test OTP Email - 3D Data Explorer', purpose='SMTP Diagnostic Test')
