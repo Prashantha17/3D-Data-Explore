@@ -490,23 +490,18 @@ def send_otp_email(to_email, username, otp_code, subject="Your 3D Data Explorer 
         part = MIMEText(html_content, 'html')
         msg.attach(part)
         
-        # Dual-port connection strategy: Try SSL (465) first for cloud compatibility, fallback to TLS (587)
-        try:
-            server = smtplib.SMTP_SSL(smtp_server, 465, timeout=8)
-            server.login(smtp_user, smtp_password)
-            server.sendmail(smtp_sender, to_email, msg.as_string())
-            server.quit()
-            logger.info(f"📧 Verification email sent successfully via SSL (465) to {to_email}")
-            return True, "Success"
-        except Exception as ssl_err:
-            logger.warning(f"SSL (465) failed: {ssl_err}. Retrying via TLS (587)...")
-            server = smtplib.SMTP(smtp_server, 587, timeout=8)
+        port = int(smtp_port) if smtp_port else 587
+        if port == 465:
+            server = smtplib.SMTP_SSL(smtp_server, port, timeout=15)
+        else:
+            server = smtplib.SMTP(smtp_server, port, timeout=15)
             server.starttls()
-            server.login(smtp_user, smtp_password)
-            server.sendmail(smtp_sender, to_email, msg.as_string())
-            server.quit()
-            logger.info(f"📧 Verification email sent successfully via TLS (587) to {to_email}")
-            return True, "Success"
+            
+        server.login(smtp_user, smtp_password)
+        server.sendmail(smtp_sender, to_email, msg.as_string())
+        server.quit()
+        logger.info(f"📧 Verification email sent successfully to {to_email}")
+        return True, "Success"
     except Exception as e:
         err_msg = str(e)
         logger.error(f"❌ Failed to send verification email to {to_email}: {err_msg}")
