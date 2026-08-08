@@ -467,30 +467,7 @@ def send_otp_email(to_email, username, otp_code, subject="Your 3D Data Explorer 
     </html>
     """
 
-    # 1. Resend API Engine (Recommended for Cloud Hosting)
-    resend_key = os.getenv('RESEND_API_KEY', '').strip('\'" \t\r\n')
-    if resend_key:
-        try:
-            resend_from = os.getenv('RESEND_FROM', '3D Data Explorer <onboarding@resend.dev>').strip('\'" \t\r\n')
-            resp = http_requests.post(
-                'https://api.resend.com/emails',
-                headers={'Authorization': f'Bearer {resend_key}', 'Content-Type': 'application/json'},
-                json={'from': resend_from, 'to': [to_email], 'subject': subject, 'html': html_content, 'text': plain_text},
-                timeout=10
-            )
-            if resp.status_code in [200, 201]:
-                logger.info(f"📧 Verification email delivered via Resend API to {to_email}")
-                return True, "Success (Resend API)"
-            else:
-                err_msg = f"Resend API error ({resp.status_code}): {resp.text}"
-                logger.error(f"❌ {err_msg}")
-                return False, err_msg
-        except Exception as e:
-            err_msg = f"Resend API exception: {e}"
-            logger.error(f"❌ {err_msg}")
-            return False, err_msg
-
-    # 2. Brevo API Engine
+    # 1. Brevo API Engine (Recommended: Allows delivery to ANY recipient email)
     brevo_key = os.getenv('BREVO_API_KEY', '').strip('\'" \t\r\n')
     if brevo_key:
         try:
@@ -513,9 +490,30 @@ def send_otp_email(to_email, username, otp_code, subject="Your 3D Data Explorer 
             else:
                 err_msg = f"Brevo API error ({resp.status_code}): {resp.text}"
                 logger.error(f"❌ {err_msg}")
+                # If Brevo fails, try Resend as fallback below
+        except Exception as e:
+            logger.error(f"❌ Brevo API exception: {e}")
+
+    # 2. Resend API Engine (Fallback)
+    resend_key = os.getenv('RESEND_API_KEY', '').strip('\'" \t\r\n')
+    if resend_key:
+        try:
+            resend_from = os.getenv('RESEND_FROM', '3D Data Explorer <onboarding@resend.dev>').strip('\'" \t\r\n')
+            resp = http_requests.post(
+                'https://api.resend.com/emails',
+                headers={'Authorization': f'Bearer {resend_key}', 'Content-Type': 'application/json'},
+                json={'from': resend_from, 'to': [to_email], 'subject': subject, 'html': html_content, 'text': plain_text},
+                timeout=10
+            )
+            if resp.status_code in [200, 201]:
+                logger.info(f"📧 Verification email delivered via Resend API to {to_email}")
+                return True, "Success (Resend API)"
+            else:
+                err_msg = f"Resend API error ({resp.status_code}): {resp.text}"
+                logger.error(f"❌ {err_msg}")
                 return False, err_msg
         except Exception as e:
-            err_msg = f"Brevo API exception: {e}"
+            err_msg = f"Resend API exception: {e}"
             logger.error(f"❌ {err_msg}")
             return False, err_msg
 
