@@ -105,30 +105,41 @@ else:
 # MONGODB CONNECTION WITH TLS / SSL HANDSHAKE FALLBACK
 # ─────────────────────────────────────────────────────────────────────────────
 
+import ssl
 MONGO_INIT_ERROR = None
 try:
     mongo_uri = os.getenv('MONGO_URI', 'mongodb://localhost:27017/gesture_explorer_elite')
     
-    # Configure PyMongo SSL / TLS settings for MongoDB Atlas on Linux / Render
-    client_kwargs = {
-        'serverSelectionTimeoutMS': 5000,
-        'retryWrites': True,
-    }
-    
     try:
         import certifi
-        client_kwargs['tlsCAFile'] = certifi.where()
+        ca_file = certifi.where()
     except Exception:
-        pass
-        
-    try:
-        mongo_client = MongoClient(mongo_uri, **client_kwargs)
-        mongo_client.server_info()
-    except Exception as ssl_err:
-        logger.warning(f'⚠️ MongoDB SSL handshake retry with TLS bypass: {ssl_err}')
-        client_kwargs['tlsAllowInvalidCertificates'] = True
-        mongo_client = MongoClient(mongo_uri, **client_kwargs)
-        mongo_client.server_info()
+        ca_file = None
+
+    connection_strategies = [
+        {'serverSelectionTimeoutMS': 5000, 'retryWrites': True, 'tlsCAFile': ca_file} if ca_file else None,
+        {'serverSelectionTimeoutMS': 5000, 'retryWrites': True, 'tlsAllowInvalidCertificates': True, 'tlsInsecure': True},
+        {'serverSelectionTimeoutMS': 5000, 'retryWrites': True, 'tls': True, 'tlsAllowInvalidCertificates': True},
+        {'serverSelectionTimeoutMS': 5000, 'retryWrites': True, 'ssl': True, 'ssl_cert_reqs': ssl.CERT_NONE},
+        {'serverSelectionTimeoutMS': 5000, 'retryWrites': True}
+    ]
+    
+    mongo_client = None
+    last_err = None
+    for strategy in connection_strategies:
+        if not strategy: continue
+        try:
+            client = MongoClient(mongo_uri, **strategy)
+            client.server_info()
+            mongo_client = client
+            logger.info(f"✅ MongoDB connected successfully using strategy: {list(strategy.keys())}")
+            break
+        except Exception as err:
+            last_err = err
+            logger.warning(f"⚠️ Strategy {list(strategy.keys())} failed: {err}")
+
+    if not mongo_client:
+        raise last_err or Exception("All MongoDB connection strategies failed.")
 
     db = mongo_client['gesture_explorer_elite']
     users_col = db['users']
@@ -138,12 +149,14 @@ try:
     reg_otps_col = db['registration_otps']
     
     # Create indexes for performance
-    users_col.create_index('email', unique=True)
-    datasets_col.create_index([('user_id', 1), ('uploaded_at', -1)])
-    gesture_col.create_index([('user_id', 1), ('timestamp', -1)])
-    reg_otps_col.create_index('email', unique=True)
+    try:
+        users_col.create_index('email', unique=True)
+        datasets_col.create_index([('user_id', 1), ('uploaded_at', -1)])
+        gesture_col.create_index([('user_id', 1), ('timestamp', -1)])
+        reg_otps_col.create_index('email', unique=True)
+    except Exception as idx_err:
+        logger.warning(f"⚠️ Index creation warning: {idx_err}")
     
-    logger.info('✅ MongoDB connected successfully')
     DB_CONNECTED = True
 except Exception as e:
     logger.warning(f'⚠️  MongoDB unavailable: {e}')
