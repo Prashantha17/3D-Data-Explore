@@ -108,7 +108,7 @@ else:
 import ssl
 MONGO_INIT_ERROR = None
 try:
-    mongo_uri = os.getenv('MONGO_URI', 'mongodb://localhost:27017/gesture_explorer_elite')
+    mongo_uri = os.getenv('MONGO_URI', 'mongodb://localhost:27017/gesture_explorer_elite').strip('\'" \t\r\n')
     
     try:
         import certifi
