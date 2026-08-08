@@ -357,68 +357,72 @@ def send_register_otp():
 
 @app.route('/api/auth/register', methods=['POST'])
 def register():
-    data = request.get_json()
-    if not data:
-        return jsonify({'error': 'Invalid request body'}), 400
-    
-    email = sanitize_string(data.get('email', ''), 254).lower()
-    name = sanitize_string(data.get('name', ''), 50)
-    pw = data.get('password', '')
-    otp = sanitize_string(data.get('otp', ''), 10).strip()
-    
-    if not email or not name or not pw:
-        return jsonify({'error': 'All fields required'}), 400
-    if not validate_email(email):
-        return jsonify({'error': 'Only @gmail.com email addresses are accepted'}), 400
-    if len(name) < 2:
-        return jsonify({'error': 'Name must be at least 2 characters'}), 400
-    pw_error = validate_password_strength(pw)
-    if pw_error:
-        return jsonify({'error': pw_error}), 400
-    if get_user_by_email(email):
-        return jsonify({'error': 'Email already registered'}), 409
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'Invalid request body'}), 400
         
-    # Check registration OTP if pending
-    db_otp = None
-    db_expires = None
-    
-    if reg_otps_col is not None:
-        try:
-            rec = reg_otps_col.find_one({'email': email})
-            if rec:
-                db_otp = rec.get('otp_code')
-                db_expires = rec.get('otp_expires_at')
-        except Exception as e:
-            logger.error(f'Failed to fetch registration OTP from DB: {e}')
-            
-    if not db_otp and email in pending_register_otps:
-        db_otp = pending_register_otps[email].get('otp_code')
-        db_expires = pending_register_otps[email].get('otp_expires_at')
+        email = sanitize_string(data.get('email', ''), 254).lower()
+        name = sanitize_string(data.get('name', ''), 50)
+        pw = data.get('password', '')
+        otp = sanitize_string(data.get('otp', ''), 10).strip()
         
-    if db_otp:
-        if not otp:
-            return jsonify({'error': 'Email verification OTP is required'}), 400
-        if db_expires and db_expires.tzinfo is None:
-            db_expires = db_expires.replace(tzinfo=timezone.utc)
-        if datetime.now(timezone.utc) > db_expires:
-            return jsonify({'error': 'OTP code has expired. Please request a new OTP.'}), 400
-        if db_otp != otp:
-            return jsonify({'error': 'Invalid OTP code. Please check your email inbox and try again.'}), 400
+        if not email or not name or not pw:
+            return jsonify({'error': 'All fields required'}), 400
+        if not validate_email(email):
+            return jsonify({'error': 'Only @gmail.com email addresses are accepted'}), 400
+        if len(name) < 2:
+            return jsonify({'error': 'Name must be at least 2 characters'}), 400
+        pw_error = validate_password_strength(pw)
+        if pw_error:
+            return jsonify({'error': pw_error}), 400
+        if get_user_by_email(email):
+            return jsonify({'error': 'Email already registered'}), 409
             
-        # Clean up pending OTP record
+        # Check registration OTP if pending
+        db_otp = None
+        db_expires = None
+        
         if reg_otps_col is not None:
             try:
-                reg_otps_col.delete_one({'email': email})
-            except Exception:
-                pass
-        pending_register_otps.pop(email, None)
-    
-    user = create_user(email, name, pw)
-    if not user:
-        return jsonify({'error': 'Registration failed'}), 400
-    
-    token = create_access_token(identity=str(user['_id']), expires_delta=timedelta(days=30))
-    return jsonify({'token': token, 'user': user_to_dict(user)}), 201
+                rec = reg_otps_col.find_one({'email': email})
+                if rec:
+                    db_otp = rec.get('otp_code')
+                    db_expires = rec.get('otp_expires_at')
+            except Exception as e:
+                logger.error(f'Failed to fetch registration OTP from DB: {e}')
+                
+        if not db_otp and email in pending_register_otps:
+            db_otp = pending_register_otps[email].get('otp_code')
+            db_expires = pending_register_otps[email].get('otp_expires_at')
+            
+        if db_otp:
+            if not otp:
+                return jsonify({'error': 'Email verification OTP is required'}), 400
+            if db_expires and db_expires.tzinfo is None:
+                db_expires = db_expires.replace(tzinfo=timezone.utc)
+            if datetime.now(timezone.utc) > db_expires:
+                return jsonify({'error': 'OTP code has expired. Please request a new OTP.'}), 400
+            if db_otp != otp:
+                return jsonify({'error': 'Invalid OTP code. Please check your email inbox and try again.'}), 400
+                
+            # Clean up pending OTP record
+            if reg_otps_col is not None:
+                try:
+                    reg_otps_col.delete_one({'email': email})
+                except Exception:
+                    pass
+            pending_register_otps.pop(email, None)
+        
+        user = create_user(email, name, pw)
+        if not user:
+            return jsonify({'error': 'Registration failed - user creation returned None'}), 400
+        
+        token = create_access_token(identity=str(user['_id']), expires_delta=timedelta(days=30))
+        return jsonify({'token': token, 'user': user_to_dict(user)}), 201
+    except Exception as e:
+        logger.error(f"❌ Exception in /api/auth/register: {e}")
+        return jsonify({'error': f'Server error: {str(e)}'}), 500
 
 @app.route('/api/auth/login', methods=['POST'])
 def login():
