@@ -444,15 +444,16 @@ def google_login():
         return jsonify({'error': 'Google authentication failed'}), 500
 
 def send_otp_email(to_email, username, otp_code, subject="Your 3D Data Explorer Verification Code", purpose="Email Verification"):
-    smtp_server = os.getenv('SMTP_SERVER', 'smtp.gmail.com')
-    smtp_port = os.getenv('SMTP_PORT', '587')
-    smtp_user = os.getenv('SMTP_USERNAME', '')
-    smtp_password = os.getenv('SMTP_PASSWORD', '').replace(' ', '')
+    smtp_server = os.getenv('SMTP_SERVER', 'smtp.gmail.com').strip('\'" \t\r\n')
+    smtp_port = os.getenv('SMTP_PORT', '587').strip('\'" \t\r\n')
+    smtp_user = os.getenv('SMTP_USERNAME', '').strip('\'" \t\r\n')
+    smtp_password = os.getenv('SMTP_PASSWORD', '').strip('\'" \t\r\n').replace(' ', '')
     # Read sender display name — supports both MAIL_DEFAULT_SENDER and SMTP_SENDER keys
     smtp_sender = os.getenv('MAIL_DEFAULT_SENDER') or os.getenv('SMTP_SENDER') or f'3D Data Explorer <{smtp_user}>'
     
-    if not smtp_server or not smtp_user or not smtp_password or smtp_user == 'your_gmail_address_here@gmail.com':
+    if not smtp_server or not smtp_user or not smtp_password or smtp_user in ['your_gmail_address_here@gmail.com', 'NOT_SET']:
         logger.warning("⚠️ SMTP email credentials are not configured in .env. Falling back to console logging.")
+        return False, "SMTP credentials missing"
         return False
         
     try:
