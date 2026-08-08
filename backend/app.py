@@ -51,8 +51,8 @@ def validate_password_strength(pw):
         return 'Invalid password'
     if len(pw) < 6:
         return 'Password must be at least 6 characters'
-    if len(pw) > 8:
-        return 'Password must be at most 8 characters'
+    if len(pw) > 64:
+        return 'Password must be at most 64 characters'
     if not re.search(r'[A-Z]', pw):
         return 'Password must contain at least one uppercase letter (A-Z)'
     if not re.search(r'[a-z]', pw):
